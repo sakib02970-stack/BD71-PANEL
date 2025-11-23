@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>BD 71 PANEL - Admin</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <style>
+    body{ font-family:Arial; background:#f4f4f6; padding:18px; }
+    .box{ max-width:720px; margin:0 auto; background:#fff; padding:14px; border-radius:10px; box-shadow:0 6px 18px rgba(0,0,0,0.08); }
+    input,select{ padding:8px; margin:6px 0; width:100%; box-sizing:border-box; }
+    button{ padding:8px 12px; margin-top:8px; cursor:pointer; }
+    table{ width:100%; border-collapse:collapse; margin-top:12px; }
+    th,td{ padding:8px; border:1px solid #e6e6e6; text-align:left; }
+    .top{ display:flex; gap:8px; align-items:center; }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h2>BD 71 PANEL — Admin</h2>
+    <div id="loginBox">
+      <input id="adminUser" placeholder="Admin username"/>
+      <input id="adminPass" placeholder="Admin password" type="password"/>
+      <button onclick="adminLogin()">Login</button>
+      <div id="loginMsg"></div>
+    </div>
+
+    <div id="panel" style="display:none;">
+      <h3>Create Username</h3>
+      <input id="newUser" placeholder="New username"/>
+      <select id="plan">
+        <option value="1">1 day</option>
+        <option value="7">7 days</option>
+        <option value="15">15 days</option>
+        <option value="30">30 days</option>
+        <option value="9999">Permanent</option>
+      </select>
+      <button onclick="createUser()">Create</button>
+      <div id="createMsg"></div>
+
+      <h3>Users</h3>
+      <button onclick="loadList()">Refresh</button>
+      <div id="list"></div>
+    </div>
+  </div>
+
+<script>
+const ADMIN_USER = "admin";
+const ADMIN_PASS = "1234";
+
+function loadUsers(){
+  try {
+    const s = localStorage.getItem("bd71_users");
+    return s ? JSON.parse(s) : [];
+  } catch(e){ return []; }
+}
+function saveUsers(users){
+  localStorage.setItem("bd71_users", JSON.stringify(users));
+}
+
+function adminLogin(){
+  const u=document.getElementById("adminUser").value.trim();
+  const p=document.getElementById("adminPass").value;
+  const msg=document.getElementById("loginMsg");
+  if(u===ADMIN_USER && p===ADMIN_PASS){
+    msg.innerText = "Logged in";
+    document.getElementById("loginBox").style.display="none";
+    document.getElementById("panel").style.display="block";
+    loadList();
+  } else {
+    msg.innerText = "Invalid admin credentials";
+  }
+}
+
+function createUser(){
+  const username = document.getElementById("newUser").value.trim();
+  const plan = document.getElementById("plan").value;
+  const msg = document.getElementById("createMsg");
+  if(!username){ msg.innerText = "Enter username"; return; }
+  const users = loadUsers();
+  if(users.find(x=>x.username===username)){ msg.innerText = "Username exists"; return; }
+  let expires = null;
+  if(plan!=="9999"){
+    const days = parseInt(plan,10);
+    expires = new Date();
+    expires.setDate(expires.getDate() + days);
+    expires = expires.toISOString();
+  }
+  users.push({ username, expires });
+  saveUsers(users);
+  msg.innerText = "Created ✓";
+  loadList();
+}
+
+function loadList(){
+  const users = loadUsers();
+  const el = document.getElementById("list");
+  if(users.length===0){ el.innerHTML = "<i>No users</i>"; return; }
+  let html = '<table><tr><th>Username</th><th>Expires</th><th>Action</th></tr>';
+  users.forEach(u=>{
+    const e = u.expires ? new Date(u.expires).toLocaleString() : "Permanent";
+    html += `<tr><td>${u.username}</td><td>${e}</td><td><button onclick="deleteUser('${u.username}')">Delete</button></td></tr>`;
+  });
+  html += '</table>';
+  el.innerHTML = html;
+}
+
+function deleteUser(username){
+  if(!confirm("Delete " + username + "?")) return;
+  let users = loadUsers();
+  users = users.filter(x=> x.username !== username);
+  saveUsers(users);
+  loadList();
+}
+
+// initialize sample admin user if no users
+if(!localStorage.getItem("bd71_users")){
+  localStorage.setItem("bd71_users", JSON.stringify([]));
+}
+</script>
+</body>
+</html>
